@@ -4,14 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "dev": "tsx src/index.ts",
-
-  "db:generate": "drizzle-kit generate",
-
-  "db:push": "drizzle-kit push",
-
-  "test": "echo \"Error: no test specified\" && exit 1"
-},
+    "dev": "tsx src/index.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed": "tsx src/db/seed.ts"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/giftikabe/kekal_back.git"
@@ -25,19 +23,20 @@
   },
   "homepage": "https://github.com/giftikabe/kekal_back#readme",
   "dependencies": {
-    "@hono/node-server": "^2.0.6",
+    "@neondatabase/serverless": "^1.1.0",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.27",
-    "pg": "^8.22.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^26.0.0",
-    "@types/pg": "^8.20.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^26.0.1",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.104.0"
   }
 }
