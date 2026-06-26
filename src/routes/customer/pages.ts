@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { createDb } from "../db/index";
-import { pages } from "../db/schema/pages";
+import { createDb } from "../../db/index";
+import { pages } from "../../db/schema/pages";
 
 type Bindings = { DATABASE_URL: string };
 

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { createDb } from "../db/index";
-import { brandValues } from "../db/schema/brandValues";
+import { createDb } from "../../db/index";
+import { brandValues } from "../../db/schema/brandValues";
 
 type Bindings = { DATABASE_URL: string };
 

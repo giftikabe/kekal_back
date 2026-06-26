@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { eq, desc } from "drizzle-orm";
-import { createDb } from "../db/index";
-import { collections } from "../db/schema/collections";
+import { createDb } from "../../db/index";
+import { collections } from "../../db/schema/collections";
 
 type Bindings = { DATABASE_URL: string };
 
