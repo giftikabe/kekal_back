@@ -1,4 +1,5 @@
 import { pgTable, text, boolean } from "drizzle-orm/pg-core";
+import { eventCategories } from "./eventCategories";
 
 export const upcomingEvents = pgTable("upcoming_events", {
   id: text("id").primaryKey(),
@@ -7,9 +8,9 @@ export const upcomingEvents = pgTable("upcoming_events", {
   intro: text("intro").notNull(),
   content: text("content").notNull(),
   featuredImage: text("featured_image").notNull(),
-  category: text("category", {
-    enum: ["exhibition", "bazaar", "workshop", "talk", "collaboration", "other"],
-  }).notNull(),
+  categoryId: text("category_id")
+    .notNull()
+    .references(() => eventCategories.id),
   eventDate: text("event_date").notNull(),
   location: text("location").notNull(),
   organizer: text("organizer").notNull(),

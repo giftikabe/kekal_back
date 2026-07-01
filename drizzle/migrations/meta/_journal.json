@@ -8,6 +8,13 @@
       "when": 1782337922780,
       "tag": "0000_wandering_iron_patriot",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782925419649,
+      "tag": "0001_rainy_vanisher",
+      "breakpoints": true
     }
   ]
 }

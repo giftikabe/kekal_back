@@ -15,6 +15,7 @@ import { collectionsRouter } from "./routes/customer/collections";
 import { productsRouter } from "./routes/customer/products";
 import { eventsRouter } from "./routes/customer/events";
 import { upcomingEventsRouter } from "./routes/customer/upcomingEvents";
+import { eventCategoriesRouter } from "./routes/customer/eventCategories";
 
 import { authRouter } from "./routes/auth";
 
@@ -33,6 +34,7 @@ import { adminProductsRouter } from "./routes/admin/products";
 import { adminEventsRouter } from "./routes/admin/events";
 import { adminUpcomingEventsRouter } from "./routes/admin/upcomingEvents";
 import { adminUsersRouter } from "./routes/admin/users";
+import { adminEventCategoriesRouter } from "./routes/admin/eventCategories";
 
 type Bindings = {
   DATABASE_URL: string;
@@ -43,7 +45,6 @@ type Bindings = {
 
 export const app = new Hono<{ Bindings: Bindings }>();
 
-// ─── CORS — must be before all routes ────────────────────────────────────────
 app.use(
   "*",
   cors({
@@ -54,7 +55,6 @@ app.use(
   }),
 );
 
-// ─── Customer routes ──────────────────────────────────────────────────────────
 app.route("/brand-identity", brandIdentityRouter);
 app.route("/brand-messages", brandMessageRouter);
 app.route("/brand-values", brandValuesRouter);
@@ -69,9 +69,9 @@ app.route("/collections", collectionsRouter);
 app.route("/products", productsRouter);
 app.route("/events", eventsRouter);
 app.route("/upcoming-events", upcomingEventsRouter);
+app.route("/event-categories", eventCategoriesRouter);
 app.route("/auth", authRouter);
 
-// ─── Admin routes ─────────────────────────────────────────────────────────────
 app.route("/admin/brand-identity", adminBrandIdentityRouter);
 app.route("/admin/brand-messages", adminBrandMessageRouter);
 app.route("/admin/brand-values", adminBrandValuesRouter);
@@ -87,3 +87,4 @@ app.route("/admin/products", adminProductsRouter);
 app.route("/admin/events", adminEventsRouter);
 app.route("/admin/upcoming-events", adminUpcomingEventsRouter);
 app.route("/admin/users", adminUsersRouter);
+app.route("/admin/event-categories", adminEventCategoriesRouter);

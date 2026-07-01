@@ -6,5 +6,5 @@ export const pageSeo = pgTable("page_seo", {
   metaTitle: text("meta_title").notNull(),
   metaDescription: text("meta_description").notNull(),
   keywords: text("keywords").array().notNull().default([]),
-  socialImage: text("social_image").notNull(),
+  socialImage: text("social_image"),
 });
