@@ -1,4 +1,7 @@
 DATABASE_URL=postgresql://neondb_owner:npg_Gnya0fvB3xIm@ep-odd-mountain-at8w49t5.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require
-=owner@kekalstudio.com
+
+
+SUPER_ADMIN_EMAIL=owner@kekalstudio.com
 SUPER_ADMIN_PASSWORD=owner@pass.1
 JWT_SECRET=e4a2f8b1c7d3e9f0a1b2c3d4e5f6a7b8
+

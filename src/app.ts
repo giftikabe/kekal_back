@@ -42,7 +42,7 @@ type Bindings = {
   SUPER_ADMIN_EMAIL: string;
   SUPER_ADMIN_PASSWORD: string;
   JWT_SECRET: string;
-  ALLOWED_ORIGINS?: string;
+  ADMIN_ALLOWED_ORIGINS?: string;
 };
 
 export const app = new Hono<{ Bindings: Bindings }>();
@@ -51,23 +51,51 @@ export const app = new Hono<{ Bindings: Bindings }>();
 app.use("*", secureHeaders());
 
 // ─── CORS ──────────────────────────────────────────────────────────────────
-// Origin is restricted to the ALLOWED_ORIGINS env var (comma-separated list),
-// e.g. "https://kekalstudio.com,https://www.kekalstudio.com". Previously this
-// was hardcoded to "*", which is fine for a token-less public GET API but is
-// unnecessarily permissive once Authorization headers are involved. If
-// ALLOWED_ORIGINS isn't set we fall back to "*" so local/dev setups keep
-// working, but this MUST be set to your real frontend domain(s) in production.
+// Two different trust levels live behind this one API:
+//
+//   - Customer-facing routes (everything except /admin/*) are public,
+//     read-mostly data meant to be fetched from any storefront/browser,
+//     so they're open to any origin.
+//
+//   - Admin routes (/admin/*) carry Authorization headers and can mutate
+//     data, so they're restricted to localhost (for local dev) and the
+//     real admin/company domain(s).
+//
+// A single cors() middleware is used (rather than one scoped to "/admin/*"
+// and one scoped to "*") so we never end up applying two sets of CORS
+// headers to the same admin request.
+const DEFAULT_ADMIN_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "https://kekalliving.com",
+  "https://www.kekalliving.com",
+];
+
 app.use(
   "*",
   cors({
     origin: (origin, c) => {
-      const configured = (c.env.ALLOWED_ORIGINS || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const isAdminRoute = c.req.path.startsWith("/admin");
 
-      if (configured.length === 0) return origin || "*";
-      return configured.includes(origin) ? origin : "";
+      if (isAdminRoute) {
+        // Allow overriding/extending the list via env var
+        // (comma-separated), otherwise fall back to the hardcoded defaults.
+        const configured = (c.env.ADMIN_ALLOWED_ORIGINS || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const allowList = configured.length
+          ? configured
+          : DEFAULT_ADMIN_ALLOWED_ORIGINS;
+
+        // No origin (e.g. curl/server-to-server) and unlisted origins
+        // are rejected for admin routes.
+        return origin && allowList.includes(origin) ? origin : "";
+      }
+
+      // Customer-facing routes: allow any origin.
+      return origin || "*";
     },
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
