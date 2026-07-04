@@ -11,7 +11,6 @@ export * from "./pageSeo";
 export * from "./collections";
 export * from "./eventCategories";
 
-
 // ─── Dependent Tables (foreign keys) ─────────────────────────────────────────
 export * from "./pageSections";
 export * from "./products";

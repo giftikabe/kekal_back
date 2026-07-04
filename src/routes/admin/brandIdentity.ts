@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { createDb } from "../../db/index";
 import { brandIdentity } from "../../db/schema/brandIdentity";
 import { authMiddleware, requirePermission } from "../../middleware/auth";
+import { pickFields } from "../../lib/pickFields";
+import { ALLOWED_FIELDS } from "../../lib/allowedFields";
 
 type Bindings = { DATABASE_URL: string; JWT_SECRET: string; SUPER_ADMIN_EMAIL: string };
 type Variables = { userId: string; email: string; isSuperAdmin: boolean; permissions: string[] };
@@ -25,7 +27,8 @@ adminBrandIdentityRouter.get("/:id", authMiddleware, requirePermission("brand", 
 adminBrandIdentityRouter.post("/", authMiddleware, requirePermission("brand", "create"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const body = await c.req.json();
-  const newRecord = { id: crypto.randomUUID(), ...body };
+  const data = pickFields(body, ALLOWED_FIELDS.brandIdentity);
+  const newRecord = { id: crypto.randomUUID(), ...data } as typeof brandIdentity.$inferInsert;
   await db.insert(brandIdentity).values(newRecord);
   return c.json(newRecord, 201);
 });
@@ -33,7 +36,8 @@ adminBrandIdentityRouter.post("/", authMiddleware, requirePermission("brand", "c
 adminBrandIdentityRouter.patch("/:id", authMiddleware, requirePermission("brand", "update"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const body = await c.req.json();
-  await db.update(brandIdentity).set(body).where(eq(brandIdentity.id, c.req.param("id")));
+  const data = pickFields(body, ALLOWED_FIELDS.brandIdentity);
+  await db.update(brandIdentity).set(data).where(eq(brandIdentity.id, c.req.param("id")));
   const result = await db.select().from(brandIdentity).where(eq(brandIdentity.id, c.req.param("id")));
   if (!result[0]) return c.json({ error: "Not found" }, 404);
   return c.json(result[0]);

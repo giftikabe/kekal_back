@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { createDb } from "../../db/index";
 import { adminUsers } from "../../db/schema/adminUsers";
 import { adminUserRoles } from "../../db/schema/adminUserRoles";
@@ -8,7 +9,6 @@ import { userPermissions } from "../../db/schema/userPermissions";
 import { roles } from "../../db/schema/roles";
 import { rolePermissions } from "../../db/schema/rolePermissions";
 import { authMiddleware } from "../../middleware/auth";
-
 
 type Bindings = {
   DATABASE_URL: string;
@@ -37,6 +37,35 @@ const superAdminOnly = async (c: any, next: any) => {
   return next();
 };
 
+const permissionSchema = z.object({
+  entity: z.string().min(1),
+  action: z.enum(["create", "read", "update", "delete"]),
+});
+
+const createUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  name: z.string().min(1),
+  roleId: z.string().optional(),
+  permissions: z.array(permissionSchema).optional(),
+});
+
+const updateUserSchema = z.object({
+  name: z.string().min(1).optional(),
+  isActive: z.boolean().optional(),
+  password: z.string().min(8).optional(),
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+});
+
+const roleSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().min(1),
+});
+
 // ─── Roles ────────────────────────────────────────────────────────────────────
 adminUsersRouter.get("/roles", authMiddleware, superAdminOnly, async (c) => {
   const db = createDb(c.env.DATABASE_URL);
@@ -45,71 +74,52 @@ adminUsersRouter.get("/roles", authMiddleware, superAdminOnly, async (c) => {
 
 adminUsersRouter.post("/roles", authMiddleware, superAdminOnly, async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const body = await c.req.json();
+  const parsed = roleSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "name and description are required" }, 400);
+
   const record = {
     id: crypto.randomUUID(),
-    ...body,
+    ...parsed.data,
     createdAt: new Date().toISOString(),
   };
   await db.insert(roles).values(record);
   return c.json(record, 201);
 });
 
-adminUsersRouter.patch(
-  "/roles/:id",
-  authMiddleware,
-  superAdminOnly,
-  async (c) => {
-    const db = createDb(c.env.DATABASE_URL);
-    const id = c.req.param("id");
-    const body = await c.req.json();
-    await db.update(roles).set(body).where(eq(roles.id, id));
-    return c.json({ success: true });
-  },
-);
+adminUsersRouter.patch("/roles/:id", authMiddleware, superAdminOnly, async (c) => {
+  const db = createDb(c.env.DATABASE_URL);
+  const id = c.req.param("id");
+  const parsed = roleSchema.partial().safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "Invalid request body" }, 400);
 
-adminUsersRouter.delete(
-  "/roles/:id",
-  authMiddleware,
-  superAdminOnly,
-  async (c) => {
-    const db = createDb(c.env.DATABASE_URL);
-    const id = c.req.param("id");
-    await db.delete(roles).where(eq(roles.id, id));
-    return c.json({ success: true });
-  },
-);
+  await db.update(roles).set(parsed.data).where(eq(roles.id, id));
+  return c.json({ success: true });
+});
+
+adminUsersRouter.delete("/roles/:id", authMiddleware, superAdminOnly, async (c) => {
+  const db = createDb(c.env.DATABASE_URL);
+  const id = c.req.param("id");
+  await db.delete(roles).where(eq(roles.id, id));
+  return c.json({ success: true });
+});
 
 // ─── Role permissions ─────────────────────────────────────────────────────────
-adminUsersRouter.get(
-  "/roles/:roleId/permissions",
-  authMiddleware,
-  superAdminOnly,
-  async (c) => {
-    const db = createDb(c.env.DATABASE_URL);
-    const roleId = c.req.param("roleId");
-    return c.json(
-      await db
-        .select()
-        .from(rolePermissions)
-        .where(eq(rolePermissions.roleId, roleId)),
-    );
-  },
-);
+adminUsersRouter.get("/roles/:roleId/permissions", authMiddleware, superAdminOnly, async (c) => {
+  const db = createDb(c.env.DATABASE_URL);
+  const roleId = c.req.param("roleId");
+  return c.json(await db.select().from(rolePermissions).where(eq(rolePermissions.roleId, roleId)));
+});
 
-adminUsersRouter.post(
-  "/roles/:roleId/permissions",
-  authMiddleware,
-  superAdminOnly,
-  async (c) => {
-    const db = createDb(c.env.DATABASE_URL);
-    const roleId = c.req.param("roleId");
-    const body = await c.req.json();
-    const record = { id: crypto.randomUUID(), roleId, ...body };
-    await db.insert(rolePermissions).values(record);
-    return c.json(record, 201);
-  },
-);
+adminUsersRouter.post("/roles/:roleId/permissions", authMiddleware, superAdminOnly, async (c) => {
+  const db = createDb(c.env.DATABASE_URL);
+  const roleId = c.req.param("roleId");
+  const parsed = permissionSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "entity and a valid action are required" }, 400);
+
+  const record = { id: crypto.randomUUID(), roleId, ...parsed.data };
+  await db.insert(rolePermissions).values(record);
+  return c.json(record, 201);
+});
 
 adminUsersRouter.delete(
   "/roles/:roleId/permissions/:permissionId",
@@ -118,9 +128,7 @@ adminUsersRouter.delete(
   async (c) => {
     const db = createDb(c.env.DATABASE_URL);
     const permissionId = c.req.param("permissionId");
-    await db
-      .delete(rolePermissions)
-      .where(eq(rolePermissions.id, permissionId));
+    await db.delete(rolePermissions).where(eq(rolePermissions.id, permissionId));
     return c.json({ success: true });
   },
 );
@@ -142,7 +150,18 @@ adminUsersRouter.get("/", authMiddleware, superAdminOnly, async (c) => {
 
 adminUsersRouter.post("/", authMiddleware, superAdminOnly, async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const { email, password, name, roleId, permissions } = await c.req.json();
+  const parsed = createUserSchema.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid request body" }, 400);
+  }
+  const { email, password, name, roleId, permissions } = parsed.data;
+
+  // Friendlier duplicate-email response instead of letting the DB's unique
+  // constraint bubble up as a generic error.
+  const existing = await db.select({ id: adminUsers.id }).from(adminUsers).where(eq(adminUsers.email, email));
+  if (existing[0]) {
+    return c.json({ error: "A user with this email already exists" }, 409);
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const userId = crypto.randomUUID();
@@ -156,7 +175,6 @@ adminUsersRouter.post("/", authMiddleware, superAdminOnly, async (c) => {
     createdAt: new Date().toISOString(),
   });
 
-  // Assign role if provided
   if (roleId) {
     await db.insert(adminUserRoles).values({
       id: crypto.randomUUID(),
@@ -165,8 +183,7 @@ adminUsersRouter.post("/", authMiddleware, superAdminOnly, async (c) => {
     });
   }
 
-  // Assign direct permissions if provided
-  if (permissions && Array.isArray(permissions)) {
+  if (permissions && permissions.length > 0) {
     for (const perm of permissions) {
       await db.insert(userPermissions).values({
         id: crypto.randomUUID(),
@@ -183,12 +200,14 @@ adminUsersRouter.post("/", authMiddleware, superAdminOnly, async (c) => {
 adminUsersRouter.patch("/:id", authMiddleware, superAdminOnly, async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const id = c.req.param("id");
-  const { name, isActive, password } = await c.req.json();
+  const parsed = updateUserSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "Invalid request body" }, 400);
+  const { name, isActive, password } = parsed.data;
 
-  const updates: any = {};
-  if (name) updates.name = name;
-  if (typeof isActive === "boolean") updates.isActive = isActive;
-  if (password) updates.passwordHash = await bcrypt.hash(password, 10);
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (isActive !== undefined) updates.isActive = isActive;
+  if (password !== undefined) updates.passwordHash = await bcrypt.hash(password, 10);
 
   await db.update(adminUsers).set(updates).where(eq(adminUsers.id, id));
   return c.json({ success: true });
@@ -202,35 +221,22 @@ adminUsersRouter.delete("/:id", authMiddleware, superAdminOnly, async (c) => {
 });
 
 // ─── User direct permissions ──────────────────────────────────────────────────
-adminUsersRouter.get(
-  "/:userId/permissions",
-  authMiddleware,
-  superAdminOnly,
-  async (c) => {
-    const db = createDb(c.env.DATABASE_URL);
-    const userId = c.req.param("userId");
-    return c.json(
-      await db
-        .select()
-        .from(userPermissions)
-        .where(eq(userPermissions.userId, userId)),
-    );
-  },
-);
+adminUsersRouter.get("/:userId/permissions", authMiddleware, superAdminOnly, async (c) => {
+  const db = createDb(c.env.DATABASE_URL);
+  const userId = c.req.param("userId");
+  return c.json(await db.select().from(userPermissions).where(eq(userPermissions.userId, userId)));
+});
 
-adminUsersRouter.post(
-  "/:userId/permissions",
-  authMiddleware,
-  superAdminOnly,
-  async (c) => {
-    const db = createDb(c.env.DATABASE_URL);
-    const userId = c.req.param("userId");
-    const body = await c.req.json();
-    const record = { id: crypto.randomUUID(), userId, ...body };
-    await db.insert(userPermissions).values(record);
-    return c.json(record, 201);
-  },
-);
+adminUsersRouter.post("/:userId/permissions", authMiddleware, superAdminOnly, async (c) => {
+  const db = createDb(c.env.DATABASE_URL);
+  const userId = c.req.param("userId");
+  const parsed = permissionSchema.safeParse(await c.req.json());
+  if (!parsed.success) return c.json({ error: "entity and a valid action are required" }, 400);
+
+  const record = { id: crypto.randomUUID(), userId, ...parsed.data };
+  await db.insert(userPermissions).values(record);
+  return c.json(record, 201);
+});
 
 adminUsersRouter.delete(
   "/:userId/permissions/:permissionId",
@@ -239,41 +245,30 @@ adminUsersRouter.delete(
   async (c) => {
     const db = createDb(c.env.DATABASE_URL);
     const permissionId = c.req.param("permissionId");
-    await db
-      .delete(userPermissions)
-      .where(eq(userPermissions.id, permissionId));
+    await db.delete(userPermissions).where(eq(userPermissions.id, permissionId));
     return c.json({ success: true });
   },
 );
 
-
-
-// ─── Super admin change own password ─────────────────────────────────────────
+// ─── Change own password (super admin or regular admin) ───────────────────────
 adminUsersRouter.patch("/me/password", authMiddleware, async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const userId = c.get("userId");
   const isSuperAdmin = c.get("isSuperAdmin");
 
-  const { currentPassword, newPassword } = await c.req.json();
-
-  if (!currentPassword || !newPassword) {
-    return c.json({ error: "Current and new password are required" }, 400);
+  const parsed = changePasswordSchema.safeParse(await c.req.json());
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid request body" }, 400);
   }
+  const { currentPassword, newPassword } = parsed.data;
 
-  const result = await db
-    .select()
-    .from(adminUsers)
-    .where(eq(adminUsers.id, userId));
-
+  const result = await db.select().from(adminUsers).where(eq(adminUsers.id, userId));
   const user = result[0];
-
   if (!user) return c.json({ error: "User not found" }, 404);
 
-  // For super admin verify against DB first, fallback to env
   if (isSuperAdmin) {
     const matchesDb = await bcrypt.compare(currentPassword, user.passwordHash);
     const matchesEnv = currentPassword === c.env.SUPER_ADMIN_PASSWORD;
-
     if (!matchesDb && !matchesEnv) {
       return c.json({ error: "Current password is incorrect" }, 401);
     }
@@ -283,10 +278,7 @@ adminUsersRouter.patch("/me/password", authMiddleware, async (c) => {
   }
 
   const newPasswordHash = await bcrypt.hash(newPassword, 10);
-  await db
-    .update(adminUsers)
-    .set({ passwordHash: newPasswordHash })
-    .where(eq(adminUsers.id, userId));
+  await db.update(adminUsers).set({ passwordHash: newPasswordHash }).where(eq(adminUsers.id, userId));
 
   return c.json({ success: true });
 });

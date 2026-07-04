@@ -2,5 +2,29 @@ name = "kekal-back"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+# ── Non-secret configuration ────────────────────────────────────────────────
+# Comma-separated list of frontend origins allowed to call this API.
+# Example: "https://kekalstudio.com,https://www.kekalstudio.com"
 [vars]
-DATABASE_URL = "postgresql://neondb_owner:npg_Gnya0fvB3xIm@ep-odd-mountain-at8w49t5.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require"
+ALLOWED_ORIGINS = "https://kekalstudio.com"
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+# DATABASE_URL, JWT_SECRET, SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD used to
+# live here as plaintext [vars]. That means the live Neon database password
+# and JWT signing secret were committed to source control in plain text —
+# anyone with repo access (or a leaked git history) had full DB access.
+#
+# They must be set as encrypted secrets instead, and are NOT stored in this
+# file at all:
+#
+#   wrangler secret put DATABASE_URL
+#   wrangler secret put JWT_SECRET
+#   wrangler secret put SUPER_ADMIN_EMAIL
+#   wrangler secret put SUPER_ADMIN_PASSWORD
+#
+# For local development, put them in a `.dev.vars` file instead (see
+# .dev.vars.example) — wrangler dev loads that automatically, and it is
+# gitignored so it never gets committed.
+#
+# IMPORTANT: rotate the Neon database password and JWT_SECRET that were
+# previously in this file before going live — treat both as compromised.

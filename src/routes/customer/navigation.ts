@@ -10,5 +10,6 @@ export const navigationRouter = new Hono<{ Bindings: Bindings }>();
 navigationRouter.get("/", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const result = await db.select().from(navigation).orderBy(asc(navigation.order));
+  c.header("Cache-Control", "public, max-age=60");
   return c.json(result);
 });

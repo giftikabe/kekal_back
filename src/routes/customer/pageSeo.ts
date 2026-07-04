@@ -11,6 +11,7 @@ export const pageSeoRouter = new Hono<{ Bindings: Bindings }>();
 pageSeoRouter.get("/", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const result = await db.select().from(pageSeo);
+  c.header("Cache-Control", "public, max-age=60");
   return c.json(result);
 });
 
@@ -23,27 +24,19 @@ pageSeoRouter.get("/by-route", async (c) => {
   const fallbackImage = c.req.query("fallbackImage");
   if (!route) return c.json({ error: "route query param required" }, 400);
 
-  const result = await db
-    .select()
-    .from(pageSeo)
-    .where(eq(pageSeo.route, route));
+  const result = await db.select().from(pageSeo).where(eq(pageSeo.route, route));
   const seo = result[0];
 
   let resolvedSocialImage = seo?.socialImage || fallbackImage || null;
   if (!resolvedSocialImage) {
-    const logoResult = await db
-      .select()
-      .from(brandIdentity)
-      .where(eq(brandIdentity.key, "logo"));
+    const logoResult = await db.select().from(brandIdentity).where(eq(brandIdentity.key, "logo"));
     resolvedSocialImage = logoResult[0]?.value || null;
   }
 
   if (!seo) {
-    return c.json(
-      { error: "Not found", socialImage: resolvedSocialImage },
-      404,
-    );
+    return c.json({ error: "Not found", socialImage: resolvedSocialImage }, 404);
   }
 
+  c.header("Cache-Control", "public, max-age=60");
   return c.json({ ...seo, socialImage: resolvedSocialImage });
 });

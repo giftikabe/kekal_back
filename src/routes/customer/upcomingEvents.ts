@@ -3,6 +3,7 @@ import { eq, ne } from "drizzle-orm";
 import { createDb } from "../../db/index";
 import { upcomingEvents } from "../../db/schema/upcomingEvents";
 import { eventCategories } from "../../db/schema/eventCategories";
+import { getPagination } from "../../lib/pagination";
 
 type Bindings = { DATABASE_URL: string };
 
@@ -28,22 +29,21 @@ function withCategory(db: ReturnType<typeof createDb>) {
       featured: upcomingEvents.featured,
     })
     .from(upcomingEvents)
-    .leftJoin(
-      eventCategories,
-      eq(upcomingEvents.categoryId, eventCategories.id),
-    );
+    .leftJoin(eventCategories, eq(upcomingEvents.categoryId, eventCategories.id));
 }
 
 upcomingEventsRouter.get("/", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  return c.json(await withCategory(db));
+  const { limit, offset } = getPagination(c);
+  const result = await withCategory(db).limit(limit).offset(offset);
+  c.header("Cache-Control", "public, max-age=30");
+  return c.json(result);
 });
 
 upcomingEventsRouter.get("/featured", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const result = await withCategory(db).where(
-    eq(upcomingEvents.featured, true),
-  );
+  const result = await withCategory(db).where(eq(upcomingEvents.featured, true));
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result);
 });
 
@@ -52,14 +52,14 @@ upcomingEventsRouter.get("/:slug", async (c) => {
   const slug = c.req.param("slug");
   const result = await withCategory(db).where(eq(upcomingEvents.slug, slug));
   if (!result[0]) return c.json({ error: "Not found" }, 404);
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result[0]);
 });
 
 upcomingEventsRouter.get("/:slug/related", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const slug = c.req.param("slug");
-  const result = await withCategory(db)
-    .where(ne(upcomingEvents.slug, slug))
-    .limit(3);
+  const result = await withCategory(db).where(ne(upcomingEvents.slug, slug)).limit(3);
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result);
 });

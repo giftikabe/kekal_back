@@ -48,10 +48,12 @@ export const authMiddleware = createMiddleware<{
     return next();
   }
 
-  // Regular admin — check is_active in DB
+  // Regular admin — check is_active in DB.
+  // Only select the columns we actually need (perf: avoids pulling
+  // passwordHash/name/etc. off the wire on every authenticated request).
   const db = createDb(c.env.DATABASE_URL);
   const result = await db
-    .select()
+    .select({ id: adminUsers.id, isActive: adminUsers.isActive })
     .from(adminUsers)
     .where(eq(adminUsers.id, userId));
 
@@ -88,3 +90,36 @@ export const requirePermission = (entity: string, action: string) =>
 
     return next();
   });
+
+// ─── Basic login rate limiter ─────────────────────────────────────────────────
+// NOTE: this is an in-memory, per-isolate limiter. On Cloudflare Workers each
+// isolate is short-lived and requests can land on different isolates, so this
+// is a defense-in-depth layer only — it is NOT a substitute for a real rate
+// limit. Before going live, also configure a Cloudflare Rate Limiting Rule
+// (or a Durable Object / KV-backed limiter) in front of POST /auth/login.
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 10;
+
+export const loginRateLimiter = createMiddleware(async (c, next) => {
+  const ip =
+    c.req.header("CF-Connecting-IP") ||
+    c.req.header("x-forwarded-for") ||
+    "unknown";
+  const now = Date.now();
+
+  const entry = loginAttempts.get(ip);
+  if (!entry || entry.resetAt <= now) {
+    loginAttempts.set(ip, { count: 1, resetAt: now + LOGIN_WINDOW_MS });
+  } else {
+    if (entry.count >= LOGIN_MAX_ATTEMPTS) {
+      return c.json(
+        { error: "Too many login attempts. Please try again later." },
+        429,
+      );
+    }
+    entry.count++;
+  }
+
+  return next();
+});

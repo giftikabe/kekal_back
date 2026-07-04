@@ -3,6 +3,7 @@ import { eq, ne } from "drizzle-orm";
 import { createDb } from "../../db/index";
 import { events } from "../../db/schema/events";
 import { eventCategories } from "../../db/schema/eventCategories";
+import { getPagination } from "../../lib/pagination";
 
 type Bindings = { DATABASE_URL: string };
 
@@ -34,24 +35,35 @@ function withCategory(db: ReturnType<typeof createDb>) {
 
 eventsRouter.get("/", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  return c.json(await withCategory(db));
+  const { limit, offset } = getPagination(c);
+  const result = await withCategory(db).limit(limit).offset(offset);
+  c.header("Cache-Control", "public, max-age=30");
+  return c.json(result);
 });
 
 eventsRouter.get("/featured", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const result = await withCategory(db).where(eq(events.featured, true));
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result);
 });
 
 eventsRouter.get("/past", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const result = await withCategory(db).where(eq(events.type, "event"));
+  const { limit, offset } = getPagination(c);
+  const result = await withCategory(db).where(eq(events.type, "event")).limit(limit).offset(offset);
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result);
 });
 
 eventsRouter.get("/community-impact", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const result = await withCategory(db).where(eq(events.type, "community-impact"));
+  const { limit, offset } = getPagination(c);
+  const result = await withCategory(db)
+    .where(eq(events.type, "community-impact"))
+    .limit(limit)
+    .offset(offset);
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result);
 });
 
@@ -60,6 +72,7 @@ eventsRouter.get("/:slug", async (c) => {
   const slug = c.req.param("slug");
   const result = await withCategory(db).where(eq(events.slug, slug));
   if (!result[0]) return c.json({ error: "Not found" }, 404);
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result[0]);
 });
 
@@ -67,5 +80,6 @@ eventsRouter.get("/:slug/related", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const slug = c.req.param("slug");
   const result = await withCategory(db).where(ne(events.slug, slug)).limit(3);
+  c.header("Cache-Control", "public, max-age=30");
   return c.json(result);
 });

@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 
 import { brandIdentityRouter } from "./routes/customer/brandIdentity";
 import { brandMessageRouter } from "./routes/customer/brandMessage";
@@ -41,14 +42,33 @@ type Bindings = {
   SUPER_ADMIN_EMAIL: string;
   SUPER_ADMIN_PASSWORD: string;
   JWT_SECRET: string;
+  ALLOWED_ORIGINS?: string;
 };
 
 export const app = new Hono<{ Bindings: Bindings }>();
 
+// ─── Security headers (X-Content-Type-Options, X-Frame-Options, etc.) ────────
+app.use("*", secureHeaders());
+
+// ─── CORS ──────────────────────────────────────────────────────────────────
+// Origin is restricted to the ALLOWED_ORIGINS env var (comma-separated list),
+// e.g. "https://kekalstudio.com,https://www.kekalstudio.com". Previously this
+// was hardcoded to "*", which is fine for a token-less public GET API but is
+// unnecessarily permissive once Authorization headers are involved. If
+// ALLOWED_ORIGINS isn't set we fall back to "*" so local/dev setups keep
+// working, but this MUST be set to your real frontend domain(s) in production.
 app.use(
   "*",
   cors({
-    origin: "*",
+    origin: (origin, c) => {
+      const configured = (c.env.ALLOWED_ORIGINS || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (configured.length === 0) return origin || "*";
+      return configured.includes(origin) ? origin : "";
+    },
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
   }),
@@ -87,3 +107,31 @@ app.route("/admin/events", adminEventsRouter);
 app.route("/admin/upcoming-events", adminUpcomingEventsRouter);
 app.route("/admin/users", adminUsersRouter);
 app.route("/admin/event-categories", adminEventCategoriesRouter);
+
+app.notFound((c) => c.json({ error: "Not found" }, 404));
+
+// ─── Centralized error handler ────────────────────────────────────────────
+// Every thrown error in a route handler (including ones from `c.req.json()`
+// on malformed bodies, and Postgres constraint violations) lands here
+// instead of leaking a raw stack trace / driver error message to the client.
+// Full detail still goes to the server-side console for debugging.
+app.onError((err: any, c) => {
+  console.error("Unhandled error:", err);
+
+  if (err instanceof SyntaxError) {
+    return c.json({ error: "Invalid JSON body" }, 400);
+  }
+
+  // Postgres unique violation / foreign key violation (Neon/pg error codes)
+  if (err?.code === "23505") {
+    return c.json({ error: "A record with this value already exists." }, 409);
+  }
+  if (err?.code === "23503") {
+    return c.json(
+      { error: "Referenced record does not exist, or is still in use." },
+      409,
+    );
+  }
+
+  return c.json({ error: "Internal server error" }, 500);
+});

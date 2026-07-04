@@ -9,5 +9,6 @@ export const pagesRouter = new Hono<{ Bindings: Bindings }>();
 pagesRouter.get("/", async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const result = await db.select().from(pages);
+  c.header("Cache-Control", "public, max-age=60");
   return c.json(result);
 });
