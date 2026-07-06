@@ -17,6 +17,8 @@ import { productsRouter } from "./routes/customer/products";
 import { eventsRouter } from "./routes/customer/events";
 import { upcomingEventsRouter } from "./routes/customer/upcomingEvents";
 import { eventCategoriesRouter } from "./routes/customer/eventCategories";
+import { contactRouter } from "./routes/contact";
+// ...
 
 import { authRouter } from "./routes/auth";
 
@@ -37,12 +39,15 @@ import { adminUpcomingEventsRouter } from "./routes/admin/upcomingEvents";
 import { adminUsersRouter } from "./routes/admin/users";
 import { adminEventCategoriesRouter } from "./routes/admin/eventCategories";
 
+
 type Bindings = {
   DATABASE_URL: string;
   SUPER_ADMIN_EMAIL: string;
   SUPER_ADMIN_PASSWORD: string;
   JWT_SECRET: string;
   ADMIN_ALLOWED_ORIGINS?: string;
+    RESEND_API_KEY: string;
+
 };
 
 export const app = new Hono<{ Bindings: Bindings }>();
@@ -50,20 +55,7 @@ export const app = new Hono<{ Bindings: Bindings }>();
 // ─── Security headers (X-Content-Type-Options, X-Frame-Options, etc.) ────────
 app.use("*", secureHeaders());
 
-// ─── CORS ──────────────────────────────────────────────────────────────────
-// Two different trust levels live behind this one API:
-//
-//   - Customer-facing routes (everything except /admin/*) are public,
-//     read-mostly data meant to be fetched from any storefront/browser,
-//     so they're open to any origin.
-//
-//   - Admin routes (/admin/*) carry Authorization headers and can mutate
-//     data, so they're restricted to localhost (for local dev) and the
-//     real admin/company domain(s).
-//
-// A single cors() middleware is used (rather than one scoped to "/admin/*"
-// and one scoped to "*") so we never end up applying two sets of CORS
-// headers to the same admin request.
+
 const DEFAULT_ADMIN_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
@@ -118,6 +110,8 @@ app.route("/events", eventsRouter);
 app.route("/upcoming-events", upcomingEventsRouter);
 app.route("/event-categories", eventCategoriesRouter);
 app.route("/auth", authRouter);
+app.route("/contact", contactRouter);
+
 
 app.route("/admin/brand-identity", adminBrandIdentityRouter);
 app.route("/admin/brand-messages", adminBrandMessageRouter);
