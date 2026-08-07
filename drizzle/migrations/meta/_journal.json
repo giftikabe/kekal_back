@@ -15,6 +15,14 @@
       "when": 1782925419649,
       "tag": "0001_rainy_vanisher",
       "breakpoints": true
-    }
+    },
+
+{
+  "idx": 2,
+  "version": "7",
+  "when": 1785798820,
+  "tag": "0002_custom_tables",
+  "breakpoints": true
+}
   ]
 }

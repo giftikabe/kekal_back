@@ -39,6 +39,13 @@ import { adminUpcomingEventsRouter } from "./routes/admin/upcomingEvents";
 import { adminUsersRouter } from "./routes/admin/users";
 import { adminEventCategoriesRouter } from "./routes/admin/eventCategories";
 
+//_________________v2______________________
+
+import { adminCustomTablesRouter } from "./routes/admin/customTables";
+import { adminCustomTableDataRouter } from "./routes/admin/customTableData";
+
+
+
 
 type Bindings = {
   DATABASE_URL: string;
@@ -129,6 +136,12 @@ app.route("/admin/events", adminEventsRouter);
 app.route("/admin/upcoming-events", adminUpcomingEventsRouter);
 app.route("/admin/users", adminUsersRouter);
 app.route("/admin/event-categories", adminEventCategoriesRouter);
+
+//______________________v2_________________________________
+
+app.route("/admin/custom-tables", adminCustomTablesRouter);
+app.route("/admin/custom-data", adminCustomTableDataRouter);
+
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 

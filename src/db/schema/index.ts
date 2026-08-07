@@ -24,3 +24,8 @@ export * from "./rolePermissions";
 export * from "./userPermissions";
 
 export * from "./refreshTokens";
+
+//-___________________ v2 _______________________________
+
+export * from "./customTables";
+

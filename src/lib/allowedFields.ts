@@ -66,4 +66,6 @@ export const ALLOWED_FIELDS = {
     "ctaText",
     "featured",
   ],
+  customTables: ["name", "display_name"],
+
 } as const;
