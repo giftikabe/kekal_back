@@ -16,13 +16,47 @@
       "tag": "0001_rainy_vanisher",
       "breakpoints": true
     },
-
-{
-  "idx": 2,
-  "version": "7",
-  "when": 1785798820,
-  "tag": "0002_custom_tables",
-  "breakpoints": true
-}
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785798820,
+      "tag": "0002_custom_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786094875955,
+      "tag": "0003_green_black_widow",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786103353408,
+      "tag": "0004_giant_spitfire",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786109553689,
+      "tag": "0005_warm_eternals",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786181834096,
+      "tag": "0006_flaky_dust",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786190757069,
+      "tag": "0007_outstanding_butterfly",
+      "breakpoints": true
+    }
   ]
 }

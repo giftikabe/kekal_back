@@ -36,6 +36,7 @@ export const ALLOWED_FIELDS = {
     "sizes",
     "inStock",
     "featured",
+    "sizeGuide",
   ],
   events: [
     "title",
@@ -67,5 +68,16 @@ export const ALLOWED_FIELDS = {
     "featured",
   ],
   customTables: ["name", "display_name"],
+  // Add this entry to the ALLOWED_FIELDS object:
+componentLibrary: ["name", "display_name", "category", "description", "tsx_code", "css_code"],
+
+
+  orders: ["status", "notes"],
+
+  commerceSettings: ["chapa_public_key", "chapa_secret_key", "chapa_webhook_secret"],
+    brandStats: ["label", "value", "order"],
+
+
+
 
 } as const;

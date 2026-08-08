@@ -7,6 +7,12 @@ compatibility_date = "2024-01-01"
 # Example: "https://kekalstudio.com,https://www.kekalstudio.com"
 [vars]
 ALLOWED_ORIGINS = "https://kekalliving.com"
+# GITHUB_TOKEN must be set as a Cloudflare secret (never in wrangler.toml):
+# wrangler secret put GITHUB_TOKEN
+# The token needs Contents:Write permission on giftikabe/kekal_frontend
+GITHUB_OWNER = "giftikabe"
+GITHUB_REPO_FRONTEND = "kekal_frontend"
+GITHUB_BRANCH = "main"
 
 # ── Secrets ──────────────────────────────────────────────────────────────────
 # DATABASE_URL, JWT_SECRET, SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD used to

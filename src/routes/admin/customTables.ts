@@ -6,8 +6,7 @@ import { customTables } from "../../db/schema/customTables";
 import { authMiddleware, requirePermission } from "../../middleware/auth";
 import { pickFields } from "../../lib/pickFields";
 import { ALLOWED_FIELDS } from "../../lib/allowedFields";
-import { COLUMN_TYPES } from "../../lib/CustomTableTypes ";
-
+import { COLUMN_TYPES } from "../../lib/customTableTypes";
 
 type Bindings = { DATABASE_URL: string; JWT_SECRET: string; SUPER_ADMIN_EMAIL: string };
 type Variables = { userId: string; email: string; isSuperAdmin: boolean; permissions: string[] };
@@ -86,10 +85,15 @@ adminCustomTablesRouter.post("/", authMiddleware, requirePermission("custom_tabl
   const sql = neon(c.env.DATABASE_URL);
   await sql.unsafe(createTableSql);
 
+  // pickFields whitelists against the incoming (snake_case) body keys, but
+  // Drizzle's insert expects the schema's JS property names (camelCase) —
+  // "display_name" from the body must become "displayName" here, or it's
+  // silently dropped and the NOT NULL column gets written as null.
   const data = pickFields(body, ALLOWED_FIELDS.customTables);
   const newRecord = {
     id: crypto.randomUUID(),
-    ...data,
+    name: (data as any).name,
+    displayName: (data as any).display_name,
     createdAt: new Date().toISOString(),
   } as typeof customTables.$inferInsert;
 
