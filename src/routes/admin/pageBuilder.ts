@@ -54,7 +54,6 @@ adminPageBuilderRouter.get(
         pageId: pageSections.pageId,
         sectionName: pageSections.sectionName,
         sectionHeader: pageSections.sectionHeader,
-        sectionContent: pageSections.sectionContent,
         buttonLabels: pageSections.buttonLabels,
         componentId: pageSections.componentId,
         componentConfig: pageSections.componentConfig,
@@ -102,7 +101,6 @@ adminPageBuilderRouter.get(
         pageId: pageSections.pageId,
         sectionName: pageSections.sectionName,
         sectionHeader: pageSections.sectionHeader,
-        sectionContent: pageSections.sectionContent,
         buttonLabels: pageSections.buttonLabels,
         componentId: pageSections.componentId,
         componentConfig: pageSections.componentConfig,
@@ -141,7 +139,6 @@ adminPageBuilderRouter.post(
       componentId: body.component_id ?? null,
       sectionName: body.section_name ?? null,
       sectionHeader: body.section_header ?? null,
-      sectionContent: body.section_content ?? null,
       buttonLabels: body.button_labels ?? [],
       componentConfig: body.component_config ?? null,
       layoutOrder: body.layout_order ?? 0,
@@ -168,7 +165,6 @@ adminPageBuilderRouter.patch(
     const updateData: Record<string, unknown> = {};
     if ("section_name" in body) updateData.sectionName = body.section_name;
     if ("section_header" in body) updateData.sectionHeader = body.section_header;
-    if ("section_content" in body) updateData.sectionContent = body.section_content;
     if ("button_labels" in body) updateData.buttonLabels = body.button_labels;
     if ("component_config" in body) updateData.componentConfig = body.component_config;
     if ("layout_order" in body) updateData.layoutOrder = body.layout_order;
@@ -246,7 +242,6 @@ adminPageBuilderRouter.get(
         pageId: pageSections.pageId,
         sectionName: pageSections.sectionName,
         sectionHeader: pageSections.sectionHeader,
-        sectionContent: pageSections.sectionContent,
         buttonLabels: pageSections.buttonLabels,
         componentId: pageSections.componentId,
         componentConfig: pageSections.componentConfig,
@@ -294,7 +289,6 @@ adminPageBuilderRouter.post(
       componentConfig: t.componentConfig,
       sectionName: t.sectionName,
       sectionHeader: t.sectionHeader,
-      sectionContent: t.sectionContent,
       buttonLabels: t.buttonLabels,
       templateName: t.templateName,
       layoutOrder: body.layout_order ?? 0,

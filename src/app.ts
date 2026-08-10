@@ -18,7 +18,6 @@ import { eventsRouter } from "./routes/customer/events";
 import { upcomingEventsRouter } from "./routes/customer/upcomingEvents";
 import { eventCategoriesRouter } from "./routes/customer/eventCategories";
 import { contactRouter } from "./routes/contact";
-// ...
 
 import { authRouter } from "./routes/auth";
 
@@ -39,12 +38,9 @@ import { adminUpcomingEventsRouter } from "./routes/admin/upcomingEvents";
 import { adminUsersRouter } from "./routes/admin/users";
 import { adminEventCategoriesRouter } from "./routes/admin/eventCategories";
 
-//_________________v2______________________
-
 import { adminCustomTablesRouter } from "./routes/admin/customTables";
 import { adminCustomTableDataRouter } from "./routes/admin/customTableData";
 
-// Add these imports alongside existing admin/customer route imports:
 import { adminComponentLibraryRouter } from "./routes/admin/componentLibrary";
 import { componentLibraryRouter } from "./routes/customer/componentLibrary";
 
@@ -56,25 +52,18 @@ import { checkoutRouter } from "./routes/customer/checkout";
 import { adminBrandStatsRouter } from "./routes/admin/brandStats";
 import { brandStatsRouter } from "./routes/customer/brandStats";
 
-// ...alongside existing app.route(...) calls
-
-
-
 type Bindings = {
   DATABASE_URL: string;
   SUPER_ADMIN_EMAIL: string;
   SUPER_ADMIN_PASSWORD: string;
   JWT_SECRET: string;
   ADMIN_ALLOWED_ORIGINS?: string;
-    RESEND_API_KEY: string;
-
+  RESEND_API_KEY: string;
 };
 
 export const app = new Hono<{ Bindings: Bindings }>();
 
-// ─── Security headers (X-Content-Type-Options, X-Frame-Options, etc.) ────────
 app.use("*", secureHeaders());
-
 
 const DEFAULT_ADMIN_ALLOWED_ORIGINS = [
   "http://localhost:3000",
@@ -90,8 +79,6 @@ app.use(
       const isAdminRoute = c.req.path.startsWith("/admin");
 
       if (isAdminRoute) {
-        // Allow overriding/extending the list via env var
-        // (comma-separated), otherwise fall back to the hardcoded defaults.
         const configured = (c.env.ADMIN_ALLOWED_ORIGINS || "")
           .split(",")
           .map((s) => s.trim())
@@ -101,12 +88,9 @@ app.use(
           ? configured
           : DEFAULT_ADMIN_ALLOWED_ORIGINS;
 
-        // No origin (e.g. curl/server-to-server) and unlisted origins
-        // are rejected for admin routes.
         return origin && allowList.includes(origin) ? origin : "";
       }
 
-      // Customer-facing routes: allow any origin.
       return origin || "*";
     },
     allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
@@ -132,7 +116,6 @@ app.route("/event-categories", eventCategoriesRouter);
 app.route("/auth", authRouter);
 app.route("/contact", contactRouter);
 
-
 app.route("/admin/brand-identity", adminBrandIdentityRouter);
 app.route("/admin/brand-messages", adminBrandMessageRouter);
 app.route("/admin/brand-values", adminBrandValuesRouter);
@@ -150,8 +133,6 @@ app.route("/admin/upcoming-events", adminUpcomingEventsRouter);
 app.route("/admin/users", adminUsersRouter);
 app.route("/admin/event-categories", adminEventCategoriesRouter);
 
-//______________________v2_________________________________
-
 app.route("/admin/custom-tables", adminCustomTablesRouter);
 app.route("/admin/custom-data", adminCustomTableDataRouter);
 
@@ -160,22 +141,15 @@ app.route("/component-library", componentLibraryRouter);
 
 app.route("/admin/page-builder", adminPageBuilderRouter);
 
-
 app.route("/admin/commerce", adminCommerceRouter);
 app.route("/checkout", checkoutRouter);
 
 app.route("/admin/brand-stats", adminBrandStatsRouter);
 app.route("/brand-stats", brandStatsRouter);
 
-
-
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 
 // ─── Centralized error handler ────────────────────────────────────────────
-// Every thrown error in a route handler (including ones from `c.req.json()`
-// on malformed bodies, and Postgres constraint violations) lands here
-// instead of leaking a raw stack trace / driver error message to the client.
-// Full detail still goes to the server-side console for debugging.
 app.onError((err: any, c) => {
   console.error("Unhandled error:", err);
 
@@ -183,7 +157,7 @@ app.onError((err: any, c) => {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
 
-  // Postgres unique violation / foreign key violation (Neon/pg error codes)
+  // Postgres unique violation / foreign key violation
   if (err?.code === "23505") {
     return c.json({ error: "A record with this value already exists." }, 409);
   }
@@ -192,6 +166,13 @@ app.onError((err: any, c) => {
       { error: "Referenced record does not exist, or is still in use." },
       409,
     );
+  }
+
+  // Postgres "relation already exists" — thrown by CREATE TABLE when a table
+  // with the same name was already created. Return a clean 409 instead of a
+  // generic 500 so the frontend can surface a meaningful message to the admin.
+  if (err?.code === "42P07") {
+    return c.json({ error: "A table with this name already exists." }, 409);
   }
 
   return c.json({ error: "Internal server error" }, 500);

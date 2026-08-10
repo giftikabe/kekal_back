@@ -20,6 +20,30 @@ type Variables = { userId: string; email: string; isSuperAdmin: boolean; permiss
 
 export const adminComponentLibraryRouter = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+/**
+ * Map snake_case keys extracted by pickFields() to the camelCase property
+ * names that Drizzle recognises. Fields that are already single words
+ * (category, description, name) are untouched.
+ */
+function mapToCamel(data: Record<string, any>): Record<string, any> {
+  const mapped: Record<string, any> = { ...data };
+
+  if ("display_name" in mapped) {
+    mapped.displayName = mapped.display_name;
+    delete mapped.display_name;
+  }
+  if ("tsx_code" in mapped) {
+    mapped.tsxCode = mapped.tsx_code;
+    delete mapped.tsx_code;
+  }
+  if ("css_code" in mapped) {
+    mapped.cssCode = mapped.css_code;
+    delete mapped.css_code;
+  }
+
+  return mapped;
+}
+
 // GET / — list all components (no code fields)
 adminComponentLibraryRouter.get("/", authMiddleware, requirePermission("brand", "read"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
@@ -58,18 +82,14 @@ adminComponentLibraryRouter.post("/", authMiddleware, requirePermission("brand",
     return c.json({ error: "name must match /^[A-Z][A-Za-z0-9]+$/" }, 400);
   }
 
-  const data = pickFields(body, ALLOWED_FIELDS.componentLibrary);
+  // pickFields extracts snake_case keys; mapToCamel converts them to what Drizzle expects.
+  const data = mapToCamel(pickFields(body, ALLOWED_FIELDS.componentLibrary));
 
-  // displayName is NOT NULL in the DB — validate/fallback before insert
-  // instead of letting a raw Postgres constraint error reach the client.
+  // displayName is NOT NULL in the DB — validate/fallback before insert.
   if (!data.displayName || String(data.displayName).trim() === "") {
-    if (body.displayName || body.display_name) {
-      data.displayName = body.displayName || body.display_name;
-    } else {
-      // Fallback: derive a readable display name from `name`
-      // e.g. "Header1" -> "Header 1"
-      data.displayName = body.name.replace(/([a-z])([A-Z0-9])/g, "$1 $2");
-    }
+    // mapToCamel already handled display_name → displayName above, so only
+    // the fallback derivation from `name` is needed here.
+    data.displayName = body.name.replace(/([a-z])([A-Z0-9])/g, "$1 $2");
   }
 
   const now = new Date().toISOString();
@@ -96,9 +116,11 @@ adminComponentLibraryRouter.patch("/:id", authMiddleware, requirePermission("bra
   delete body.isCore;
   delete body.is_core;
 
-  const data = pickFields(body, ALLOWED_FIELDS.componentLibrary);
+  // pickFields extracts snake_case keys; mapToCamel converts them to what Drizzle expects.
+  const data = mapToCamel(pickFields(body, ALLOWED_FIELDS.componentLibrary));
 
-  // Never allow displayName to be explicitly nulled out via PATCH
+  // Never allow displayName to be explicitly nulled out via PATCH.
+  // This check now actually runs because mapToCamel populated data.displayName correctly.
   if ("displayName" in data && (!data.displayName || String(data.displayName).trim() === "")) {
     return c.json({ error: "displayName cannot be empty" }, 400);
   }

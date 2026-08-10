@@ -7,6 +7,12 @@ compatibility_date = "2024-01-01"
 # Example: "https://kekalstudio.com,https://www.kekalstudio.com"
 [vars]
 ALLOWED_ORIGINS = "https://kekalliving.com"
+# Frontend URL — used as the Chapa return_url base after payment completes.
+# Set to the actual production frontend domain (no trailing slash).
+SITE_URL = "https://kekalliving.com"
+# Backend Worker URL — used as the Chapa webhook callback_url target.
+# Set to the deployed Cloudflare Worker URL (no trailing slash).
+API_BASE = "https://kekal-back.kekal.workers.dev"
 # GITHUB_TOKEN must be set as a Cloudflare secret (never in wrangler.toml):
 # wrangler secret put GITHUB_TOKEN
 # The token needs Contents:Write permission on giftikabe/kekal_frontend
