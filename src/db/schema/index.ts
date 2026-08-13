@@ -32,4 +32,6 @@ export * from "./componentLibrary";
 export * from "./commerceSettings";
 export * from "./orders";
 export * from "./brandStats";
+export * from "./mediaPlaceholders";
+export * from "./pageSectionComponents";
 

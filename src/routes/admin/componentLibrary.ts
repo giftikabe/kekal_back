@@ -5,7 +5,7 @@ import { componentLibrary } from "../../db/schema/componentLibrary";
 import { authMiddleware, requirePermission } from "../../middleware/auth";
 import { pickFields } from "../../lib/pickFields";
 import { ALLOWED_FIELDS } from "../../lib/allowedFields";
-import { commitFileToFrontend } from "../../lib/github";
+import { commitFileToFrontend, getFileFromFrontend, deleteFileFromFrontend } from "../../lib/github";
 
 type Bindings = {
   DATABASE_URL: string;
@@ -22,75 +22,100 @@ export const adminComponentLibraryRouter = new Hono<{ Bindings: Bindings; Variab
 
 /**
  * Map snake_case keys extracted by pickFields() to the camelCase property
- * names that Drizzle recognises. Fields that are already single words
- * (category, description, name) are untouched.
+ * names Drizzle recognises.
  */
 function mapToCamel(data: Record<string, any>): Record<string, any> {
   const mapped: Record<string, any> = { ...data };
-
   if ("display_name" in mapped) {
     mapped.displayName = mapped.display_name;
     delete mapped.display_name;
   }
-  if ("tsx_code" in mapped) {
-    mapped.tsxCode = mapped.tsx_code;
-    delete mapped.tsx_code;
+  if ("prop_schema" in mapped) {
+    mapped.propSchema = mapped.prop_schema;
+    delete mapped.prop_schema;
   }
-  if ("css_code" in mapped) {
-    mapped.cssCode = mapped.css_code;
-    delete mapped.css_code;
-  }
-
   return mapped;
 }
 
-// GET / — list all components (no code fields)
+// GET / — list all components (metadata only — there's no code to omit anymore)
 adminComponentLibraryRouter.get("/", authMiddleware, requirePermission("brand", "read"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const results = await db
-    .select({
-      id: componentLibrary.id,
-      name: componentLibrary.name,
-      displayName: componentLibrary.displayName,
-      category: componentLibrary.category,
-      status: componentLibrary.status,
-      isCore: componentLibrary.isCore,
-    })
+    .select()
     .from(componentLibrary)
     .orderBy(asc(componentLibrary.category), asc(componentLibrary.displayName));
   return c.json(results);
 });
 
-// GET /:id — full record including code
+// GET /:id — single component metadata
 adminComponentLibraryRouter.get("/:id", authMiddleware, requirePermission("brand", "read"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const result = await db
-    .select()
-    .from(componentLibrary)
-    .where(eq(componentLibrary.id, c.req.param("id")));
+  const result = await db.select().from(componentLibrary).where(eq(componentLibrary.id, c.req.param("id")));
   if (!result[0]) return c.json({ error: "Not found" }, 404);
   return c.json(result[0]);
 });
 
-// POST / — create component
+// GET /:id/source — fetches the CURRENT source from GitHub (there is no DB copy).
+// Returns { tsx, css } or 404 if it's a draft that's never been published.
+adminComponentLibraryRouter.get(
+  "/:id/source",
+  authMiddleware,
+  requirePermission("brand", "read"),
+  async (c) => {
+    const db = createDb(c.env.DATABASE_URL);
+    const result = await db.select().from(componentLibrary).where(eq(componentLibrary.id, c.req.param("id")));
+    if (!result[0]) return c.json({ error: "Not found" }, 404);
+    const component = result[0];
+
+    if (!component.githubPath) {
+      return c.json({ error: "This component hasn't been published yet — nothing on GitHub to load." }, 404);
+    }
+    if (!c.env.GITHUB_TOKEN) {
+      return c.json({ error: "GitHub not configured. Run: wrangler secret put GITHUB_TOKEN" }, 503);
+    }
+
+    const [tsxFile, cssFile] = await Promise.all([
+      getFileFromFrontend(
+        c.env.GITHUB_TOKEN,
+        c.env.GITHUB_OWNER,
+        c.env.GITHUB_REPO_FRONTEND,
+        c.env.GITHUB_BRANCH,
+        component.githubPath
+      ),
+      component.cssGithubPath
+        ? getFileFromFrontend(
+            c.env.GITHUB_TOKEN,
+            c.env.GITHUB_OWNER,
+            c.env.GITHUB_REPO_FRONTEND,
+            c.env.GITHUB_BRANCH,
+            component.cssGithubPath
+          )
+        : Promise.resolve(null),
+    ]);
+
+    if (!tsxFile) {
+      return c.json({ error: "File not found on GitHub — it may have been deleted or renamed there." }, 404);
+    }
+
+    return c.json({ tsx: tsxFile.content, css: cssFile?.content ?? "" });
+  }
+);
+
+// POST / — create DRAFT metadata (no code yet — code only exists once you Publish)
 adminComponentLibraryRouter.post("/", authMiddleware, requirePermission("brand", "create"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const body = await c.req.json();
 
-  // Validate name format
   if (!body.name || !/^[A-Z][A-Za-z0-9]+$/.test(body.name)) {
     return c.json({ error: "name must match /^[A-Z][A-Za-z0-9]+$/" }, 400);
   }
 
-  // pickFields extracts snake_case keys; mapToCamel converts them to what Drizzle expects.
   const data = mapToCamel(pickFields(body, ALLOWED_FIELDS.componentLibrary));
 
-  // displayName is NOT NULL in the DB — validate/fallback before insert.
   if (!data.displayName || String(data.displayName).trim() === "") {
-    // mapToCamel already handled display_name → displayName above, so only
-    // the fallback derivation from `name` is needed here.
     data.displayName = body.name.replace(/([a-z])([A-Z0-9])/g, "$1 $2");
   }
+  if (!Array.isArray(data.propSchema)) data.propSchema = [];
 
   const now = new Date().toISOString();
   const newRecord = {
@@ -98,6 +123,8 @@ adminComponentLibraryRouter.post("/", authMiddleware, requirePermission("brand",
     ...data,
     status: "draft",
     isCore: false,
+    githubPath: null,
+    cssGithubPath: null,
     createdAt: now,
     updatedAt: now,
   } as typeof componentLibrary.$inferInsert;
@@ -106,111 +133,132 @@ adminComponentLibraryRouter.post("/", authMiddleware, requirePermission("brand",
   return c.json(newRecord, 201);
 });
 
-// PATCH /:id — update component (cannot change name or isCore)
+// PATCH /:id — update metadata (display name / category / description / propSchema).
+// Cannot change name, isCore, status, or the github path fields directly —
+// those are only ever touched by /publish.
 adminComponentLibraryRouter.patch("/:id", authMiddleware, requirePermission("brand", "update"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const body = await c.req.json();
 
-  // Strip protected fields
   delete body.name;
   delete body.isCore;
   delete body.is_core;
+  delete body.status;
+  delete body.githubPath;
+  delete body.github_path;
 
-  // pickFields extracts snake_case keys; mapToCamel converts them to what Drizzle expects.
   const data = mapToCamel(pickFields(body, ALLOWED_FIELDS.componentLibrary));
 
-  // Never allow displayName to be explicitly nulled out via PATCH.
-  // This check now actually runs because mapToCamel populated data.displayName correctly.
   if ("displayName" in data && (!data.displayName || String(data.displayName).trim() === "")) {
     return c.json({ error: "displayName cannot be empty" }, 400);
   }
 
   const updatedAt = new Date().toISOString();
+  await db.update(componentLibrary).set({ ...data, updatedAt }).where(eq(componentLibrary.id, c.req.param("id")));
 
-  await db
-    .update(componentLibrary)
-    .set({ ...data, updatedAt })
-    .where(eq(componentLibrary.id, c.req.param("id")));
-
-  const result = await db
-    .select()
-    .from(componentLibrary)
-    .where(eq(componentLibrary.id, c.req.param("id")));
+  const result = await db.select().from(componentLibrary).where(eq(componentLibrary.id, c.req.param("id")));
   if (!result[0]) return c.json({ error: "Not found" }, 404);
   return c.json(result[0]);
 });
 
-// DELETE /:id — delete component (core components protected)
+// DELETE /:id — delete component (core components protected). Also removes
+// the file(s) from GitHub if they were ever published, so the repo doesn't
+// accumulate orphaned files.
 adminComponentLibraryRouter.delete("/:id", authMiddleware, requirePermission("brand", "delete"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const result = await db
-    .select()
-    .from(componentLibrary)
-    .where(eq(componentLibrary.id, c.req.param("id")));
+  const result = await db.select().from(componentLibrary).where(eq(componentLibrary.id, c.req.param("id")));
   if (!result[0]) return c.json({ error: "Not found" }, 404);
-  if (result[0].isCore) return c.json({ error: "Core components cannot be deleted" }, 403);
+  const component = result[0];
+  if (component.isCore) return c.json({ error: "Core components cannot be deleted" }, 403);
+
+  if (c.env.GITHUB_TOKEN && (component.githubPath || component.cssGithubPath)) {
+    if (component.githubPath) {
+      await deleteFileFromFrontend(
+        c.env.GITHUB_TOKEN,
+        c.env.GITHUB_OWNER,
+        c.env.GITHUB_REPO_FRONTEND,
+        c.env.GITHUB_BRANCH,
+        component.githubPath,
+        `chore: remove component ${component.name}`
+      );
+    }
+    if (component.cssGithubPath) {
+      await deleteFileFromFrontend(
+        c.env.GITHUB_TOKEN,
+        c.env.GITHUB_OWNER,
+        c.env.GITHUB_REPO_FRONTEND,
+        c.env.GITHUB_BRANCH,
+        component.cssGithubPath,
+        `chore: remove styles for ${component.name}`
+      );
+    }
+  }
+
   await db.delete(componentLibrary).where(eq(componentLibrary.id, c.req.param("id")));
   return c.json({ message: "Deleted successfully" });
 });
 
-// POST /:id/publish — commit component files to frontend repo
+// POST /:id/publish — THE ONLY place code ever gets written anywhere.
+// Body: { tsx_code: string, css_code?: string }. The code is taken straight
+// from the request, committed to GitHub, and then discarded — it is never
+// written to Postgres.
 adminComponentLibraryRouter.post("/:id/publish", authMiddleware, requirePermission("brand", "update"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
-  const result = await db
-    .select()
-    .from(componentLibrary)
-    .where(eq(componentLibrary.id, c.req.param("id")));
+  const result = await db.select().from(componentLibrary).where(eq(componentLibrary.id, c.req.param("id")));
   if (!result[0]) return c.json({ error: "Not found" }, 404);
-
   const component = result[0];
 
-  if (!component.tsxCode || component.tsxCode.trim() === "") {
-    return c.json({ error: "Cannot publish component with no code" }, 400);
+  const body = await c.req.json();
+  const tsxCode: string = body.tsx_code ?? "";
+  const cssCode: string = body.css_code ?? "";
+
+  if (!tsxCode.trim()) {
+    return c.json({ error: "Cannot publish a component with no code" }, 400);
   }
 
   const { GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO_FRONTEND, GITHUB_BRANCH } = c.env;
-
   if (!GITHUB_TOKEN) {
-    return c.json(
-      { success: false, error: "GitHub not configured. Run: wrangler secret put GITHUB_TOKEN" },
-      503
-    );
+    return c.json({ success: false, error: "GitHub not configured. Run: wrangler secret put GITHUB_TOKEN" }, 503);
   }
 
-  // Commit TSX file
+  const tsxPath = `src/kekal/components/${component.name}.tsx`;
+  const cssPath = `src/kekal/components/${component.name}.module.css`;
+
   const tsxResult = await commitFileToFrontend(
     GITHUB_TOKEN,
     GITHUB_OWNER,
     GITHUB_REPO_FRONTEND,
     GITHUB_BRANCH,
-    `src/kekal/components/${component.name}.tsx`,
-    component.tsxCode,
+    tsxPath,
+    tsxCode,
     `feat: publish component ${component.name} from Component Library`
   );
-
   if (!tsxResult.success) {
     return c.json({ success: false, error: tsxResult.error });
   }
 
-  // Commit CSS file if present
-  if (component.cssCode && component.cssCode.trim() !== "") {
+  if (cssCode.trim() !== "") {
     await commitFileToFrontend(
       GITHUB_TOKEN,
       GITHUB_OWNER,
       GITHUB_REPO_FRONTEND,
       GITHUB_BRANCH,
-      `src/kekal/components/${component.name}.module.css`,
-      component.cssCode,
+      cssPath,
+      cssCode,
       `feat: publish styles for ${component.name} from Component Library`
     );
   }
 
-  // Update status to published
   const updatedAt = new Date().toISOString();
   await db
     .update(componentLibrary)
-    .set({ status: "published", updatedAt })
+    .set({
+      status: "published",
+      githubPath: tsxPath,
+      cssGithubPath: cssCode.trim() !== "" ? cssPath : component.cssGithubPath,
+      updatedAt,
+    })
     .where(eq(componentLibrary.id, component.id));
 
-  return c.json({ success: true, commit_url: tsxResult.commit_url });
+  return c.json({ success: true, commit_url: tsxResult.commit_url, githubPath: tsxPath });
 });

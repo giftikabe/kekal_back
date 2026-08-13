@@ -13,7 +13,14 @@ export const ALLOWED_FIELDS = {
   navigation: ["label", "href", "order"],
   pages: ["name", "route"],
   pageSeo: ["route", "metaTitle", "metaDescription", "keywords", "socialImage"],
-  pageSections: ["pageId", "sectionName", "sectionHeader", "buttonLabels"],
+  pageSections: [
+    "pageId",
+    "sectionName",
+    "sectionHeader",
+    "buttonLabels",
+    "canvasHeight",
+    "templateName",
+  ],
   collections: [
     "name",
     "slug",
@@ -68,7 +75,22 @@ export const ALLOWED_FIELDS = {
     "featured",
   ],
   customTables: ["name", "display_name"],
-  componentLibrary: ["name", "display_name", "category", "description", "tsx_code", "css_code"],
+  // NOTE: tsx_code / css_code intentionally removed — code is never
+  // written to the DB anymore. See componentLibrary.ts route: /publish
+  // takes code directly in the request body and commits it straight to
+  // GitHub without ever calling pickFields/insert with it.
+  componentLibrary: ["name", "display_name", "category", "description", "prop_schema"],
+  sectionComponents: [
+    "componentId",
+    "x",
+    "y",
+    "width",
+    "height",
+    "zIndex",
+    "propsOverride",
+    "dataBindings",
+  ],
+  mediaPlaceholders: ["url", "label"],
   orders: ["status", "notes"],
   commerceSettings: ["chapa_public_key", "chapa_secret_key", "chapa_webhook_secret"],
   brandStats: ["label", "value", "order"],

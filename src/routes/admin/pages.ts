@@ -1,7 +1,8 @@
 import { Hono } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { createDb } from "../../db/index";
 import { pages } from "../../db/schema/pages";
+import { navigation } from "../../db/schema/navigation";
 import { authMiddleware, requirePermission } from "../../middleware/auth";
 import { pickFields } from "../../lib/pickFields";
 import { ALLOWED_FIELDS } from "../../lib/allowedFields";
@@ -23,13 +24,31 @@ adminPagesRouter.get("/:id", authMiddleware, requirePermission("pages", "read"),
   return c.json(result[0]);
 });
 
+// POST / — create a page. NEW: optional `addToNavigation` + `navLabel` also
+// creates a navigation row pointing at the new page's route, right next to
+// the page itself, instead of that being a manual follow-up step in the
+// Navigation screen.
 adminPagesRouter.post("/", authMiddleware, requirePermission("pages", "create"), async (c) => {
   const db = createDb(c.env.DATABASE_URL);
   const body = await c.req.json();
   const data = pickFields(body, ALLOWED_FIELDS.pages);
   const newRecord = { id: crypto.randomUUID(), ...data } as typeof pages.$inferInsert;
   await db.insert(pages).values(newRecord);
-  return c.json(newRecord, 201);
+
+  let navRecord = null;
+  if (body.addToNavigation) {
+    const existingNav = await db.select().from(navigation).orderBy(desc(navigation.order));
+    const nextOrder = (existingNav[0]?.order ?? -1) + 1;
+    navRecord = {
+      id: crypto.randomUUID(),
+      label: (body.navLabel && String(body.navLabel).trim()) || newRecord.name,
+      href: newRecord.route,
+      order: nextOrder,
+    };
+    await db.insert(navigation).values(navRecord);
+  }
+
+  return c.json({ ...newRecord, navigation: navRecord }, 201);
 });
 
 adminPagesRouter.patch("/:id", authMiddleware, requirePermission("pages", "update"), async (c) => {

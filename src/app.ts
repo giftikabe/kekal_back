@@ -52,6 +52,10 @@ import { checkoutRouter } from "./routes/customer/checkout";
 import { adminBrandStatsRouter } from "./routes/admin/brandStats";
 import { brandStatsRouter } from "./routes/customer/brandStats";
 
+import { adminSectionComponentsRouter } from "./routes/admin/sectionComponents";
+import { adminMediaPlaceholdersRouter } from "./routes/admin/mediaPlaceholders";
+
+
 type Bindings = {
   DATABASE_URL: string;
   SUPER_ADMIN_EMAIL: string;
@@ -146,6 +150,10 @@ app.route("/checkout", checkoutRouter);
 
 app.route("/admin/brand-stats", adminBrandStatsRouter);
 app.route("/brand-stats", brandStatsRouter);
+
+app.route("/media-placeholders", adminMediaPlaceholdersRouter);
+app.route("/section-components", adminSectionComponentsRouter);
+
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 

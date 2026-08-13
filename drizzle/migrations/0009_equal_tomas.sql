@@ -1,0 +1,1 @@
+ALTER TABLE "custom_tables" ADD COLUMN "columns" jsonb DEFAULT '[]'::jsonb NOT NULL;
