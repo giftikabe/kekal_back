@@ -20,6 +20,11 @@ export const ALLOWED_FIELDS = {
     "buttonLabels",
     "canvasHeight",
     "templateName",
+    // Page Builder fields
+    "componentId",
+    "componentConfig",
+    "layoutOrder",
+    "isVisible",
   ],
   collections: [
     "name",
@@ -79,17 +84,7 @@ export const ALLOWED_FIELDS = {
   // written to the DB anymore. See componentLibrary.ts route: /publish
   // takes code directly in the request body and commits it straight to
   // GitHub without ever calling pickFields/insert with it.
-  componentLibrary: ["name", "display_name", "category", "description", "prop_schema"],
-  sectionComponents: [
-    "componentId",
-    "x",
-    "y",
-    "width",
-    "height",
-    "zIndex",
-    "propsOverride",
-    "dataBindings",
-  ],
+
   mediaPlaceholders: ["url", "label"],
   orders: ["status", "notes"],
   commerceSettings: ["chapa_public_key", "chapa_secret_key", "chapa_webhook_secret"],

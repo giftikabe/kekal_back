@@ -41,10 +41,6 @@ import { adminEventCategoriesRouter } from "./routes/admin/eventCategories";
 import { adminCustomTablesRouter } from "./routes/admin/customTables";
 import { adminCustomTableDataRouter } from "./routes/admin/customTableData";
 
-import { adminComponentLibraryRouter } from "./routes/admin/componentLibrary";
-import { componentLibraryRouter } from "./routes/customer/componentLibrary";
-
-import { adminPageBuilderRouter } from "./routes/admin/pageBuilder";
 
 import { adminCommerceRouter } from "./routes/admin/commerce";
 import { checkoutRouter } from "./routes/customer/checkout";
@@ -52,7 +48,6 @@ import { checkoutRouter } from "./routes/customer/checkout";
 import { adminBrandStatsRouter } from "./routes/admin/brandStats";
 import { brandStatsRouter } from "./routes/customer/brandStats";
 
-import { adminSectionComponentsRouter } from "./routes/admin/sectionComponents";
 import { adminMediaPlaceholdersRouter } from "./routes/admin/mediaPlaceholders";
 
 
@@ -140,10 +135,6 @@ app.route("/admin/event-categories", adminEventCategoriesRouter);
 app.route("/admin/custom-tables", adminCustomTablesRouter);
 app.route("/admin/custom-data", adminCustomTableDataRouter);
 
-app.route("/admin/component-library", adminComponentLibraryRouter);
-app.route("/component-library", componentLibraryRouter);
-
-app.route("/admin/page-builder", adminPageBuilderRouter);
 
 app.route("/admin/commerce", adminCommerceRouter);
 app.route("/checkout", checkoutRouter);
@@ -152,7 +143,6 @@ app.route("/admin/brand-stats", adminBrandStatsRouter);
 app.route("/brand-stats", brandStatsRouter);
 
 app.route("/media-placeholders", adminMediaPlaceholdersRouter);
-app.route("/section-components", adminSectionComponentsRouter);
 
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
