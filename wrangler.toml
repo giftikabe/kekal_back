@@ -17,7 +17,8 @@ API_BASE = "https://kekal-back.kekal.workers.dev"
 # wrangler secret put GITHUB_TOKEN
 # The token needs Contents:Write permission on giftikabe/kekal_frontend
 GITHUB_OWNER = "giftikabe"
-GITHUB_REPO_FRONTEND = "kekal_frontend"
+GITHUB_TOKEN = ""
+GITHUB_REPO = "kekal_front"
 GITHUB_BRANCH = "main"
 
 # ── Secrets ──────────────────────────────────────────────────────────────────

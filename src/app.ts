@@ -50,6 +50,11 @@ import { brandStatsRouter } from "./routes/customer/brandStats";
 
 import { adminMediaPlaceholdersRouter } from "./routes/admin/mediaPlaceholders";
 
+import { adminSectionTemplatesRouter } from "./routes/admin/sectionTemplates";
+import { adminPageSectionInstancesRouter } from "./routes/admin/pageSectionInstances";
+
+
+
 
 type Bindings = {
   DATABASE_URL: string;
@@ -143,6 +148,9 @@ app.route("/admin/brand-stats", adminBrandStatsRouter);
 app.route("/brand-stats", brandStatsRouter);
 
 app.route("/media-placeholders", adminMediaPlaceholdersRouter);
+
+app.route("/admin/section-templates", adminSectionTemplatesRouter);
+app.route("/admin/page-section-instances", adminPageSectionInstancesRouter);
 
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));

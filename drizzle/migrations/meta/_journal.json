@@ -71,6 +71,13 @@
       "when": 1786619635777,
       "tag": "0009_equal_tomas",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787535124166,
+      "tag": "0010_cuddly_beyonder",
+      "breakpoints": true
     }
   ]
 }
