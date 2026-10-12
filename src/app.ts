@@ -39,7 +39,6 @@ import { adminUsersRouter } from "./routes/admin/users";
 import { adminEventCategoriesRouter } from "./routes/admin/eventCategories";
 
 import { adminCustomTablesRouter } from "./routes/admin/customTables";
-import { adminCustomTableDataRouter } from "./routes/admin/customTableData";
 
 
 import { adminCommerceRouter } from "./routes/admin/commerce";
@@ -48,10 +47,7 @@ import { checkoutRouter } from "./routes/customer/checkout";
 import { adminBrandStatsRouter } from "./routes/admin/brandStats";
 import { brandStatsRouter } from "./routes/customer/brandStats";
 
-import { adminMediaPlaceholdersRouter } from "./routes/admin/mediaPlaceholders";
 
-import { adminSectionTemplatesRouter } from "./routes/admin/sectionTemplates";
-import { adminPageSectionInstancesRouter } from "./routes/admin/pageSectionInstances";
 
 
 
@@ -138,7 +134,6 @@ app.route("/admin/users", adminUsersRouter);
 app.route("/admin/event-categories", adminEventCategoriesRouter);
 
 app.route("/admin/custom-tables", adminCustomTablesRouter);
-app.route("/admin/custom-data", adminCustomTableDataRouter);
 
 
 app.route("/admin/commerce", adminCommerceRouter);
@@ -147,10 +142,7 @@ app.route("/checkout", checkoutRouter);
 app.route("/admin/brand-stats", adminBrandStatsRouter);
 app.route("/brand-stats", brandStatsRouter);
 
-app.route("/media-placeholders", adminMediaPlaceholdersRouter);
 
-app.route("/admin/section-templates", adminSectionTemplatesRouter);
-app.route("/admin/page-section-instances", adminPageSectionInstancesRouter);
 
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));

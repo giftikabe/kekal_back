@@ -39,16 +39,17 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^26.0.1",
-    "drizzle-kit": "^0.31.10",
+    "drizzle-kit": "^0.31.11",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "wrangler": "^4.104.0"
   },
   "allowScripts": {
+    "contextify@0.1.15": true,
+    "esbuild@0.28.2": true,
+    "es5-ext@0.10.64": true,
+    "workerd@1.20261006.1": true,
     "esbuild@0.18.20": true,
-    "esbuild@0.19.12": true,
-    "esbuild@0.28.1": true,
-    "workerd@1.20260820.1": true,
-    "contextify@0.1.15": true
+    "esbuild@0.25.12": true
   }
 }

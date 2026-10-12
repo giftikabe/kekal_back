@@ -27,9 +27,7 @@ export * from "./refreshTokens";
 
 //-___________________ v2 _______________________________
 
-export * from "./customTables";
 export * from "./commerceSettings";
 export * from "./orders";
 export * from "./brandStats";
-export * from "./mediaPlaceholders";
 
