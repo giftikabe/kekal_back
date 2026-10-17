@@ -14,6 +14,7 @@ import { pageSectionsRouter } from "./routes/customer/pageSections";
 import { pageSeoRouter } from "./routes/customer/pageSeo";
 import { collectionsRouter } from "./routes/customer/collections";
 import { productsRouter } from "./routes/customer/products";
+import { sitotaRouter } from "./routes/customer/sitota";
 import { eventsRouter } from "./routes/customer/events";
 import { upcomingEventsRouter } from "./routes/customer/upcomingEvents";
 import { eventCategoriesRouter } from "./routes/customer/eventCategories";
@@ -33,12 +34,12 @@ import { adminPageSectionsRouter } from "./routes/admin/pageSections";
 import { adminPageSeoRouter } from "./routes/admin/pageSeo";
 import { adminCollectionsRouter } from "./routes/admin/collections";
 import { adminProductsRouter } from "./routes/admin/products";
+import { adminSitotaRouter } from "./routes/admin/sitota";
 import { adminEventsRouter } from "./routes/admin/events";
 import { adminUpcomingEventsRouter } from "./routes/admin/upcomingEvents";
 import { adminUsersRouter } from "./routes/admin/users";
 import { adminEventCategoriesRouter } from "./routes/admin/eventCategories";
 
-import { adminCustomTablesRouter } from "./routes/admin/customTables";
 
 
 import { adminCommerceRouter } from "./routes/admin/commerce";
@@ -46,7 +47,6 @@ import { checkoutRouter } from "./routes/customer/checkout";
 
 import { adminBrandStatsRouter } from "./routes/admin/brandStats";
 import { brandStatsRouter } from "./routes/customer/brandStats";
-
 
 
 
@@ -110,6 +110,7 @@ app.route("/page-sections", pageSectionsRouter);
 app.route("/page-seo", pageSeoRouter);
 app.route("/collections", collectionsRouter);
 app.route("/products", productsRouter);
+app.route("/sitota-items", sitotaRouter);
 app.route("/events", eventsRouter);
 app.route("/upcoming-events", upcomingEventsRouter);
 app.route("/event-categories", eventCategoriesRouter);
@@ -128,12 +129,12 @@ app.route("/admin/page-sections", adminPageSectionsRouter);
 app.route("/admin/page-seo", adminPageSeoRouter);
 app.route("/admin/collections", adminCollectionsRouter);
 app.route("/admin/products", adminProductsRouter);
+app.route("/admin/sitota-items", adminSitotaRouter);
 app.route("/admin/events", adminEventsRouter);
 app.route("/admin/upcoming-events", adminUpcomingEventsRouter);
 app.route("/admin/users", adminUsersRouter);
 app.route("/admin/event-categories", adminEventCategoriesRouter);
 
-app.route("/admin/custom-tables", adminCustomTablesRouter);
 
 
 app.route("/admin/commerce", adminCommerceRouter);
@@ -141,7 +142,6 @@ app.route("/checkout", checkoutRouter);
 
 app.route("/admin/brand-stats", adminBrandStatsRouter);
 app.route("/brand-stats", brandStatsRouter);
-
 
 
 

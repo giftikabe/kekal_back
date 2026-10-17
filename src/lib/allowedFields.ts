@@ -36,6 +36,7 @@ export const ALLOWED_FIELDS = {
     "collectionId", "name", "slug", "description", "mainImage",
     "gallery", "colors", "sizes", "inStock", "featured", "sizeGuide",
   ],
+  sitota: ["name", "slug", "description", "mainImage", "gallery", "colors", "sizes", "occasion", "giftNote", "inStock", "featured"],
   events: [
     "title", "slug", "intro", "content", "featuredImage", "gallery",
     "videoUrl", "categoryId", "type", "eventDate", "location",

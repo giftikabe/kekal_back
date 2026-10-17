@@ -1,0 +1,10 @@
+import { Hono } from "hono";
+import { eq, and } from "drizzle-orm";
+import { createDb } from "../../db/index";
+import { sitota } from "../../db/schema/sitota";
+import { getPagination } from "../../lib/pagination";
+type Bindings = { DATABASE_URL: string };
+export const sitotaRouter = new Hono<{ Bindings: Bindings }>();
+sitotaRouter.get("/", async (c) => { const db=createDb(c.env.DATABASE_URL); const {limit,offset}=getPagination(c); const rows=await db.select().from(sitota).limit(limit).offset(offset); c.header("Cache-Control","public, max-age=30"); return c.json(rows); });
+sitotaRouter.get("/featured", async (c) => { const db=createDb(c.env.DATABASE_URL); const rows=await db.select().from(sitota).where(and(eq(sitota.featured,true),eq(sitota.inStock,true))); c.header("Cache-Control","public, max-age=30"); return c.json(rows); });
+sitotaRouter.get("/:slug", async (c) => { const db=createDb(c.env.DATABASE_URL); const rows=await db.select().from(sitota).where(eq(sitota.slug,c.req.param("slug"))); if(!rows[0] || !rows[0].inStock) return c.json({error:"Not found"},404); c.header("Cache-Control","public, max-age=30"); return c.json(rows[0]); });
